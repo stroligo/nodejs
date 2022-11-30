@@ -25,7 +25,9 @@ const userSchema = new Schema(
     },
     age: { type: Number, min: 0, max: 99 },
     active: { type: Boolean, default: true },
-    endereco: {
+    tasks: [{ type: String }],
+    birth: [{ type: Date, default: new Date() }],
+    address: {
       cidade: { type: String, trim: true },
       estado: { type: String, trim: true },
     },

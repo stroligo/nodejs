@@ -1,110 +1,95 @@
 import express from "express";
 const processRoute = express.Router();
 
-const bancoDados = [
-  {
-    id: "e27ab2b1-cb91-4b18-ab90-5895cc9abd29",
-    documentName: "Licitação Enap - Curso Web Dev",
-    status: "Em andamento",
-    details:
-      "Processo para capacitação de servidores públicos em desenvolvimento de aplicações na WEB. Parceria com Ironhack",
-    dateInit: "28/11/2022",
-    comments: [
-      "Processo aberto",
-      "Processo partiu para as partes assinarem",
-      "Processo agora está em análise final",
-      "Processo já tem data final",
-    ],
-    dateEnd: "16/12/2022",
-    setor: "enap",
-  },
-  {
-    id: "ee5999d7-02e9-4b3d-a1ab-f067eef54173",
-    documentName: "Licitação Compras - Notebooks",
-    status: "Em andamento",
-    details: "Processo de licitação para compra de notebooks",
-    dateInit: "30/11/2022",
-    comments: ["Processo em aberto e sem previsão de conclusão"],
-    dateEnd: "",
-    setor: "tre",
-  },
-  ,
-  {
-    id: "ee5999d7-02e9-4b3d-a1ab-f067eef54173",
-    documentName: "Licitação Compras - Ar Condicionado",
-    status: "Finalizado",
-    details: "Processo de licitação para compra de ar-condicionado",
-    dateInit: "15/11/2022",
-    comments: ["Processo em aberto", "Processo finalizado"],
-    dateEnd: "25/11/2022",
-    setor: "trj",
-  },
-];
+// Acesso ao DB
+import ProcessModel from "../model/process.model.js";
 
-//Page HOME - OK
-processRoute.get("/", (req, res) => {
-  const bemVindo =
-    "Você tem as seguintes opções /all-process, /new-process, /del-process, /edit-process";
-  return res.status(200).json({ msg: bemVindo, turma: "Bem vindo" });
-});
+// CREATE PROCESS - MONGODB
+processRoute.post("/create-process", async (req, res) => {
+  try {
+    const form = req.body;
 
-// CRUD - CREATE READ UPDATE DELETE - OK
-//R - READ
-processRoute.get("/all-process", (req, res) => {
-  const dados = bancoDados;
-  return res.status(200).json({ dados });
-});
+    //quer criar um documento dentro da sua collection -> .create()
+    const newProcess = await ProcessModel.create(form);
 
-//C - CREATE - OK
-processRoute.post("/new-process", (req, res) => {
-  const form = req.body;
-  bancoDados.push(form);
-
-  console.log("Processo adicionado: " + form);
-  console.log(form);
-
-  return res.status(201).json(bancoDados);
-});
-
-//D - DELETE - OK
-processRoute.delete("/del-process/:id", (req, res) => {
-  const { id } = req.params;
-
-  //BUSCA
-  const deleteById = bancoDados.find((user) => user.id === id);
-  if (!deleteById) {
-    return res.status(400).json({ msg: "Processo nao existe" });
+    return res.status(201).json(newProcess);
+  } catch (error) {
+    console.log(error.errors);
+    return res.status(500).json(error);
   }
-  //ACHA O INDEX
-  const index = bancoDados.indexOf(deleteById);
-  // REMOVE
-  bancoDados.splice(index, 1);
-
-  console.log("Processo deletado: " + req.params.id);
-
-  return res.status(200).json({ msg: "Processo deletado: " + req.params.id });
 });
 
-//U - UPDATE - PUT - OK
-processRoute.put("/edit-process/:id", (req, res) => {
-  const { id } = req.params;
+//R - READ - MONGODB
+processRoute.get("/all-process", async (req, res) => {
+  try {
+    // find vazio -> todas as ocorrencias
+    // projections -> defini os campos que vão ser retornados
+    // sort() -> ordenada o retorno dos dados
+    // limit() -> define quantas ocorrencias serão retornadas
+    const process = await ProcessModel.find({}, { __v: 0, updatedAt: 0 })
+      .sort({
+        age: 1,
+      })
+      .limit(100);
 
-  //BUSCA
-  const editUser = bancoDados.find((user) => user.id === id);
-  if (!editUser) {
-    return res.status(400).json({ msg: "Processo nao existe" });
+    return res.status(200).json(process);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(error.errors);
   }
-  //ACHA O INDEX
-  const index = bancoDados.indexOf(editUser);
+});
 
-  bancoDados[index] = {
-    ...editUser,
-    ...req.body,
-  };
+//R - READ - MONGODB
+processRoute.get("/oneProcess/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const process = await ProcessModel.findById(id);
 
-  console.log("Processo Editado: " + req.params.id);
+    if (!process) {
+      return res.status(400).json({ msg: "Usuário não encontrado" });
+    }
 
-  return res.status(200).json({ msg: "Processo editado: " + req.params.id });
+    return res.status(200).json(process);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(error.errors);
+  }
+});
+
+//D - Delete - MONGODB
+processRoute.delete("/del-process/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleteProcess = await ProcessModel.findByIdAndDelete(id);
+
+    if (!deleteProcess) {
+      return res.status(400).json({ msg: "Usuário não encontrado" });
+    }
+
+    return res.status(200).json(deleteProcess);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(error.errors);
+  }
+});
+
+//U - UPDATE - PUT - MONGODB
+processRoute.put("/edit-process/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleteProcess = await ProcessModel.findByIdAndUpdate(
+      id,
+      { ...req.body },
+      { new: true, runValidators: true }
+    );
+
+    return res.status(200).json(deleteProcess);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(error.errors);
+  }
 });
 
 export default processRoute;

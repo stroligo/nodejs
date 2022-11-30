@@ -1,81 +1,95 @@
 import express from "express";
 const userRoute = express.Router();
 
-const bancoDados = [
-  {
-    id: "11bf5b37-e0b8-42e0-8dcf-dc8c4aefc000",
-    name: "Karen Okasaki",
-    age: 29,
-    role: "professora",
-    active: true,
-    tasks: ["preparar aula do mongoCompass", "Crud no mongoDB"],
-  },
-];
+// Acesso ao DB
+import UserModel from "../model/user.model.js";
 
-//Page HOME
-userRoute.get("/", (req, res) => {
-  const bemVindo =
-    "Você tem as seguintes opções /all-users, /new-users, /del-user, /edit-user";
-  return res.status(200).json({ msg: bemVindo, turma: "Bem vindo" });
-});
+// CREATE USER - MONGODB
+userRoute.post("/create-user", async (req, res) => {
+  try {
+    const form = req.body;
 
-// CRUD - CREATE READ UPDATE DELETE
-//R - READ
-userRoute.get("/all-users", (req, res) => {
-  const dados = bancoDados;
-  return res.status(200).json({ dados });
-});
+    //quer criar um documento dentro da sua collection -> .create()
+    const newUser = await UserModel.create(form);
 
-//C - CREATE
-userRoute.post("/new-user", (req, res) => {
-  const form = req.body;
-  bancoDados.push(form);
-
-  console.log("Usuario adicionado: " + form);
-  console.log(form);
-
-  return res.status(201).json(bancoDados);
-});
-
-//D - DELETE
-userRoute.delete("/del-user/:id", (req, res) => {
-  const { id } = req.params;
-
-  //BUSCA
-  const deleteById = bancoDados.find((user) => user.id === id);
-  if (!deleteById) {
-    return res.status(400).json({ msg: "Usuario nao existe" });
+    return res.status(201).json(newUser);
+  } catch (error) {
+    console.log(error.errors);
+    return res.status(500).json(error.errors);
   }
-  //ACHA O INDEX
-  const index = bancoDados.indexOf(deleteById);
-  // REMOVE
-  bancoDados.splice(index, 1);
-
-  console.log("Usuario deletado: " + req.params.id);
-
-  return res.status(200).json(req.params.id);
 });
 
-//U - UPDATE - PUT
-userRoute.put("/edit-user/:id", (req, res) => {
-  const { id } = req.params;
+//R - READ - MONGODB
+userRoute.get("/all-users", async (req, res) => {
+  try {
+    // find vazio -> todas as ocorrencias
+    // projections -> defini os campos que vão ser retornados
+    // sort() -> ordenada o retorno dos dados
+    // limit() -> define quantas ocorrencias serão retornadas
+    const users = await UserModel.find({}, { __v: 0, updatedAt: 0 })
+      .sort({
+        age: 1,
+      })
+      .limit(100);
 
-  //BUSCA
-  const editUser = bancoDados.find((user) => user.id === id);
-  if (!editUser) {
-    return res.status(400).json({ msg: "Usuario nao existe" });
+    return res.status(200).json(users);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(error.errors);
   }
-  //ACHA O INDEX
-  const index = bancoDados.indexOf(editUser);
+});
 
-  bancoDados[index] = {
-    ...editUser,
-    ...req.body,
-  };
+//R - READ - MONGODB
+userRoute.get("/oneUser/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await UserModel.findById(id);
 
-  console.log("Usuario Editado: " + req.params.id);
+    if (!user) {
+      return res.status(400).json({ msg: "Usuário não encontrado" });
+    }
 
-  return res.status(200).json(req.params.id);
+    return res.status(200).json(user);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(error.errors);
+  }
+});
+
+//D - Delete - MONGODB
+userRoute.delete("/del-user/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedUser = await UserModel.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return res.status(400).json({ msg: "Usuário não encontrado" });
+    }
+
+    return res.status(200).json(deletedUser);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(error.errors);
+  }
+});
+
+//U - UPDATE - PUT - MONGODB
+userRoute.put("/edit-user/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedUser = await UserModel.findByIdAndUpdate(
+      id,
+      { ...req.body },
+      { new: true, runValidators: true }
+    );
+
+    return res.status(200).json(deletedUser);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json(error.errors);
+  }
 });
 
 export default userRoute;

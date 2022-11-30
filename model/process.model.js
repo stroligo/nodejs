@@ -19,7 +19,6 @@ const processSchema = new Schema(
       type: String,
       required: true,
       minLength: 10,
-      maxLength: 30,
       trim: true,
     },
     dateInit: {
